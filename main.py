@@ -28,26 +28,30 @@ async def on_message(message):
         await bot.process_commands(message)
         return
     
-@bot.command(name='Hunter ||', description='Help for Commands of This bot')
+# @bot.command(name='Hunter ||', description='Help for Commands of This bot')
+@bot.command()
 async def hunterbot(ctx):
     "!hunterbot for help with commands"
     embed = discord.Embed(
         title='This Bot Was Created To Make Your Life Easier, If You Have Any Idea Or Problem, Do Not Hesitate To Express It',
-        description="Commands", color=0xFF9E00)
+        description="Commands", color=0xCC0066)
     embed.set_author(name="Created By Hunter Mol")
-    embed.add_field(name="**`!ig`**", value="Sends a report on the inputted instgram user", inline=False)
-    embed.add_field(name="**`!info`**", value="Shows the time, and weather for any city", inline=False)
-    embed.add_field(name="**`!pwd`**", value="Generates a random passowrd based on your inputted length", inline=False)
-    embed.add_field(name="**`!alekosbot`**", value="Shows The Commamds", inline=True)
+    embed.add_field(name="**`!ig`**", value="Provides info on instgram profile", inline=False)
+    embed.add_field(name="**`!info`**", value="Provides the time, and weather for any city", inline=False)
+    embed.add_field(name="**`!m`**", value="Returns input in spongebob text", inline=False)
+
+    embed.add_field(name="**`!pwd`**", value="Generates a random password based on your inputted length", inline=False)
+    embed.add_field(name="**`!hunterbot`**", value="Shows The Commamds", inline=True)
 
     await ctx.send(embed=embed)
 
 
 @bot.command()
-async def ig(ctx, ig_name):
+async def ig(ctx,*, ig_name):
     account_name = ig_name.lstrip("!ig")
     account_name.strip()
-    print(account_name)
+    full_name = ''.join(ig_name)
+    print(full_name)
     url = "https://www.instagram.com/{}/?__a=1".format(account_name)
     r = requests.get(url)
     stcode = r.status_code
@@ -58,9 +62,34 @@ async def ig(ctx, ig_name):
         posts = ("Posts: {}".format(len(res["graphql"]['user']["edge_owner_to_timeline_media"]['edges'])))
         likes = sum([res["graphql"]['user']["edge_owner_to_timeline_media"]['edges'][i]["node"]["edge_liked_by"]['count'] for i in range(len(res["graphql"]['user']["edge_owner_to_timeline_media"]['edges']))])
         total_likes = "Total Likes: {}".format(likes)
-        await ctx.send(f"""Profile Status for {account_name}. {followers} |  {following} | {posts} | {total_likes}. """)
+        posts_number = posts.strip('Posts:')
+        with open("instgram.txt", "a") as f:
+            f.write(f"""{full_name} was looked up on {datetime.now().strftime("%a, %m/%d/%Y, %I:%M:%S %p")}""")
+            f.write("\n")
+
+        if int(posts_number) > 0 and likes == 0:
+            await ctx.send(f"""Profile Status for {account_name}. {followers} |  {following} | {posts} | {total_likes} | Private account: True. """)
+        elif int(posts_number) == 0 and likes == 0:
+            ig_embed = discord.Embed(tile=f"{account_name}", description=f"Data for {account_name}", color=0xCC0066)
+            ig_embed.add_field(name="Followers", value=f"{followers}")
+            ig_embed.add_field(name="Following", value=f"{following}")
+            ig_embed.add_field(name="Number of posts", value=f"{posts}")
+            ig_embed.add_field(name="Private Account", value=f"N/A")
+            await ctx.send(embed=ig_embed)
+        else:
+            ig_embed = discord.Embed(tile=f"{account_name}", description=f"Data for {account_name}", color=0xCC0066)
+            ig_embed.add_field(name="Followers", value=f"{followers}")
+            ig_embed.add_field(name="Following", value=f"{following}")
+            ig_embed.add_field(name="Number of posts", value=f"{posts}")
+            ig_embed.add_field(name="Total likes", value=f"{total_likes}")
+            ig_embed.add_field(name="Public Account", value=f"True")
+            await ctx.send(embed=ig_embed)
     else:
         await ctx.send("Incorrect Ig Name.")
+
+with open('colors.txt', encoding='utf-8') as file:
+    color = file.read().split('\n')
+list_color = [x.replace('#', '0x') for x in color]  
 
 @bot.command()
 async def info(ctx, city):
@@ -101,33 +130,40 @@ async def info(ctx, city):
                     return time, feels_like, humidity, temp, description, wind, name
 
                 time, feels_like, humidity, temp, description, wind, name = api_weather(edited_town)
+
+
+                weather_embed = discord.Embed(tile=f"{name}", description=f"Live Data for {name}", color=0xCC0066)
+                weather_embed.add_field(name="Time", value=f"{time}")
+                weather_embed.add_field(name="Temperture", value=f"{temp}°C")
+                weather_embed.add_field(name="Feels Like", value=f"{feels_like}°C")
+                weather_embed.add_field(name="Weather", value=f"{description}")
+
                 await ctx.channel.purge(limit=1)
-                await ctx.send(f"""```css
-                Current Data On {name}: 
-                Time {time}, Feels Like {feels_like}°C,
-                Temperture: {temp}°C, Weather: {description}.```""")
+                await ctx.send(embed=weather_embed)
 
             except:
-                await ctx.send("An error has occurrd, check the name of the city or the spelling. ")
+                exception_embed = discord.Embed(title="Error", description="An error has occurrd, check the name of the city or the spelling.", color=0xFF9E00)
+                await ctx.channel.purge(limit=1)
+                await ctx.send(embed=exception_embed)
 
 @bot.command()
 async def pwd(ctx, password_length):
     password_length.lstrip("!pwd")
+    print(password_length)
     pad_length = password_length.strip()
     chars = string.ascii_lowercase + string.ascii_uppercase + string.digits + '!@#$%^&*()+_'
-    try: 
+    try:
         generated_pwd = ''.join(random.choice(chars) for i in range(int(pad_length)))
         await ctx.send(f"Pwd: `{generated_pwd}`")
     except:
         await ctx.send(f"Unable to generate password. Must be 2000 or fewer in lenth.")
 
 @bot.command()
-async def p(ctx, text):
-    # text = text.lstrip('!p')
-    print(text)
+async def m(ctx,*, text):
+    input = ''.join(text)
     words = []
-    for i in range(len(text)):
-        x = text[i]
+    for i in range(len(input)):
+        x = input[i]
         if random.randint(1,2) == 1:
             words.append(x.upper())
         else:
